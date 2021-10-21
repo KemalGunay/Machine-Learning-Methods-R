@@ -1,0 +1,66 @@
+
+
+
+```{r}
+
+# Read data from Github
+# RAW option seçmemişz lazım Csv formatında indirmamiz için yoksa Html olarak gelir.
+
+
+library(readr)
+vehicle <- read.csv("https://raw.githubusercontent.com/bkrai/R-files-from-YouTube/main/vehicle.csv") 
+
+head(vehicle)
+
+# ctrl + l    konsolu tamamen temizler
+
+pairs(vehicle[3:5]) # we only choose from columns 3 to 5
+
+
+
+
+# MULTIPLE LINEAR REGRESSION
+results <- lm(lc~Mileage+lh, vehicle)
+results
+
+
+# if we want more details
+# Pr is probability value, it indicates if a variable contributes model or not 
+# *** 3 stars that highly significant
+# **  2 stars slightly
+# * 1 star slightly, it is still significant
+# If no star, there is no statically any role in model
+# if there is no significant affect, we can remove the variables which is not significant importan for the model
+# Anything is more than % 95 for p-value is really good
+## for example p-value: 0.0001  
+## (1-p) = 1-0.0001 we will get = 0.999 OR 99.99 confidence
+summary(results)
+
+results <- lm(lc~lh, vehicle)
+results
+summary(results)
+# F-statistic also gives a p-value, it is also the same as the earlier one, this below number is very small, it is almost one hundred
+
+# Multiple R-squared 0.951 means the model contribute 95 percent to the overall variability which is very good. Therefore you have variables that are contributing high
+
+# if you see R-squared values which are like point zero one or like 5 percent, 2 percent or 10 percent  that's not really good model. Those variables doesn't contribute much in predicting target for this data you are covering like almost 95 percent of the variation by using just two variables so that's a very good sign. Only like remaining 5 percent is the unexplained part so if you try to bring more variables more this model you are addressing only that 5% remaining and that's not going to add too much value generally
+
+
+# ANOVA
+# You can create comprasion with these below lines, if adding new variables contribute model or not
+
+reduced <- lm(lc~lh, vehicle)
+full <- lm(lc~lh + Mileage, vehicle) 
+anova(reduced, full)
+
+# as we can see below adding mileage variable doesn't contribute much model
+
+
+# PREDICTION (DEFAULT %95 CONFIDENCE)
+predict(results, data.frame(lh = 10), interval = "confidence")
+
+
+
+
+```
+
