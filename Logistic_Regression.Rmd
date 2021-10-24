@@ -1,0 +1,107 @@
+
+
+
+
+
+# LOGISTIC REGRESSION
+```{r}
+
+
+# Read data from Github
+# Choose Raw option on Github for csv file
+
+
+library(readr)
+mydata <- read.csv("YOURPATH/datasets/binary.csv", row.names = FALSE) 
+
+
+str(mydata)
+
+# rank variabla has 4 values, it is categorical variable, therefore let's convert categorical variable
+# let's change two categorical variables: admit and rank variables
+
+mydata$admit <- as.factor(mydata$admit)
+mydata$rank <- as.factor(mydata$rank)
+
+# when we check data again; admit has 2 levels and rank has 4 levels
+str(mydata)
+
+
+# Two-way table of factor variables
+# We are checking if any cell has 0 values
+# As we see maximum value is 97, minumum value is 12, we don't have any zero value, so we can move forward
+xtabs(~admit + rank, data = mydata)
+
+
+# Partition data - train (80%) & test (20%)
+set.seed(1234)
+ind <- sample(2, nrow(mydata), replace = T, prob = c(0.8, 0.2)) # first 2 means is for splitting data two part, nrow is number of rows, replace is that sampling is replacing, probability is 0.8 and test data 0.2
+train <- mydata[ind == 1, ] # ind == 1 is for all rows and after comma is for all columns
+test <- mydata[ind == 2, ]
+
+
+# LOGISTIC REGRESSION MODEL
+# we will use training data for lr model
+mymodel <- glm(admit ~ gre + gpa +  rank, family = "binomial", data = train)
+
+# let's check the model
+summary(mymodel)
+
+# as we can see the output of mymodel, gre is low confidence level, it is 0.18 and 1 - 0.18 = 0.82% confidence level. If we look gpa is that 1 - 0.003 = 0.997 or 99.7% confidence level. It is statiscally significant. We should remove gre from the model.
+
+mymodel <- glm(admit ~ gpa + rank, family = "binomial", data = train)
+summary(mymodel)
+
+
+# PREDICTION
+# we will use train data for prediction, type of prediction is response
+p1 <- predict(mymodel, train, type = "response")
+
+# let's check first views of predictyion
+# we don't see observation 5, because it is in test dataset
+head(p1)
+
+# PROBABILITY CALCULATION
+# P / (1-P) is called "Odds"
+# ln(p/1-p) = bo + b1x1 + b2x2 +.......+ bnxn  = y
+# p -> probability of accepting
+# 1 - p -> probability of rejecting
+# ln(p/1-p) = y
+# p / 1-p = e_head_y
+# 1-p/p = 1/e_head_y -> 1/p - 1 = 1/e_head_y    -> 
+# 1/p  = 1 + 1/e_head_y = 1+e_head_y / ehaead_y
+# p = e_head_y / 1+e_head_y
+head(train)
+
+# let's calculate it manually
+# y <- -4.7270 + ( 1.3735*3.61) + (1*-1.1645)
+# y
+
+# exp(y)/(1+exp(y))
+
+
+# MISCLASSIFICATION ERROR - TRAIN DATA
+pred1 <- ifelse(p1 > 0.5, 1, 0) # if p1 is more than 0.5, reponse is 1, which is admitted, otherwise 0 is not admitted. We are converting the probability 1 and 0 
+
+tab1 <- table(Predicted = pred1, Actual = train$admit) # we create a confucion table pred1 vs train. We give names Predicted and Actual 
+tab1
+
+# 208 applicants not actuall admitted, model is also predicted them correctly. This is correct classification
+# 29 applicants admitted. 15 and 73 are not correct classifications. They are dianol, missclasification 73 + 15 are missclassification out of 325 obs
+
+1 - sum(diag(tab1))/sum(tab1)
+
+
+# MISCLASSIFICATION ERROR - TEST DATA
+p2 <- predict(mymodel, test, type = "response")
+pred2 <-ifelse(p2>0.5, 1, 0)
+tab2 <- table(Predicted = pred2, Actual = test$admit)
+tab2
+
+
+# GOODNESS-OF-FIT TEST
+with(mymodel, pchisq(null.deviance - deviance, df.null-df.residual, lower.tail = F))
+# 0.00000146
+
+```
+
