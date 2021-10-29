@@ -1,0 +1,145 @@
+
+
+# Data 
+```{r}
+
+data("iris")
+str(iris)
+# we have 150 obs and 5 variables
+# species has 3 factors
+
+# let's see some statistic
+summary(iris)
+# wee see species has equal obs each
+
+
+
+# PARTITION DATA
+set.seed(111)
+ind <- sample(2, nrow(iris),
+              replace = TRUE,
+              prob = c(0.8, 0.2)) # 0.8 for training data, 0.2 test data
+
+
+training <- iris[ind == 1, ] # training has 120 obs
+testing <- iris[ind == 2, ] # test data has 30 obs
+
+
+
+
+# SCATTER PLOTS & CORRELATION COEFFICIENTS
+# install.packages("psych")
+library(psych)
+pairs.panels(training[,-5], # 5 one is factor variable, we'll take it out
+             gap = 0, # scatter plot type
+             bg = c("red", "yellow", "blue")[training$Species], # each of species color name, you can specify variable here
+             pch = 21) # what type of symbol we want
+
+
+# high correlations among independent variables lead to "Multicollineratiy" problem. For handling this problem, we can use PCA analysis.
+
+
+# PRINCIPAL COMPONENT ANALYSIS
+
+pc <- prcomp(training[, -5], # we will take out the dependent variable, PCA analysis we only use independet variables
+             center = TRUE, # we want to use center for average for variables 
+             scale. = TRUE) # normalization 
+
+
+# let's check what attributes pc has
+attributes(pc)
+pc$center # this gives us average of each variables
+mean(training$Sepal.Length) # let's check mean, we see the same result for sepal.length
+
+
+pc$scale
+sd(training$Sepal.Length) # when we check sd for sepal.length we get same result
+print(pc) # we have four variables, and have four principal component results.
+# this number goes between -1 and 1 
+
+summary(pc)
+# prportion of variance pc1 explain 0.74 variability, pc2 0.22 variability, pc3 and pc4 are not important role in terms of variability
+# cumulative proportion pc1 074, pc2 0,96 variablility explain
+# first two pcs are important
+
+
+
+# ORTHOGONALITY OF PRINCIPAL COMPONENT
+# let's create scatter plot
+pairs.panels(pc$x,
+            gap = 0,
+            bg = c("red", "yellow", "blue")[training$Species],
+            pch = 21)
+
+
+# As we can see there is no correlation anymore, that helps us get rid of "Multicollineratiy" problem
+
+
+# BI PLOT
+library(devtools)
+
+install_github("vqv/ggbiplot")
+library(ggbiplot)
+g <- ggbiplot(pc,
+              obs.scale = 1,
+              var.scale = 1,
+              groups = training$Species,
+              elipse = TRUE, # elipse around the daha point
+              circle = TRUE,# circle by the plot
+              elipse.prob = 0.68) # this is the elipse size, if it is adjusted bigger, elipse will be larger, 0.68 is default value
+# we will add some more layer on g
+g <- g + scale_color_discrete(name = "")
+g <- g + theme(legend.direction = "horizontal",
+               legend.position = "top")
+print(g)
+# As we can see x axis PC1 explains 74.2%, y axis PC2 explains 22.1% variability
+# Also we see four arrows, each represents the variables in the data set.
+# petal lenght and petal width are very close, they are high correlation. Also Sepal Length has high correlation these two variables. Sepal Width is low correlation.
+# These high correlated variables are on the right side, which is positive values.
+# Biplot is very importtan plot for PCA analysis
+
+
+# PREDICTION WITH PRINCIPAL COMPONENTS
+trg <- predict(pc, training)
+trg <- data.frame(trg, training[5])
+tst <- predict(pc, testing)
+tst <- data.frame(tst, testing[5])
+
+
+# Multinomianl Logistic Regression Model with PCs
+library(nnet)
+trg$Species <- relevel(trg$Species, ref = "setosa") # setosa is our first references
+mymodel <- multinom(Species~PC1+PC2, data = trg)
+summary(mymodel)
+
+
+# CONFUSTION MATRIX & MISCLASSIFICATION ERROR - TRAINING
+p <- predict(mymodel, trg)
+tab <- table(p, trg$Species)
+tab
+
+1 - sum(diag(tab)) / sum(tab) # misslassication error / percent
+
+
+
+# CONFUSION MATRIX % MISCLASSIFICATION ERROR - TESTIONG
+p1 <- predict(mymodel, tst)
+tab1 <- table(p1, tst$Species)
+tab1
+
+
+1 - sum(diag(tab)) /  sum(tab1) # missclassification error for testing data
+
+# PCA ADVANTAGES
+# Useful for dimension reduction for high-dimensional data analysis
+# Helps reduce the number of predictor items using principal components.
+# Helps to make predictor items indipendent & avoide multicollinearity problem
+# Allows interpretation of many variables using a 2-dimensional biplot
+# Can be used for developing prediction models
+
+# PCA DISADVANTAGES
+# Only numeric variables can be used.
+# Prediction models are less interpretable.
+
+```
+
