@@ -1,0 +1,107 @@
+
+
+
+```{r}
+
+require(topicmodels)
+require(pdftools)
+require(tm)
+require(tidytext)
+require(ggplot2)
+require(dplyr)
+
+
+# loads all pdf files
+all_files <- list.files(pattern = "pdf$")
+all_opinions <- lapply(all_files, pdf_text)
+
+
+# corpus is a database containing words
+document <- Corpus(VectorSource(all_opinions)) # create corpus
+
+
+# cleaning data
+document <- tm_map(document, content_transformer(tolower)) # convert all text to lower case
+document <- tm_map(document, removeNumbers) # remove numbers from document
+document <- tm_map(document, removeWords, stopwords("english")) # remove stopwords in English
+document <- tm_map(document, removePunctuation, preserve_intra_word_dashes = TRUE)
+document <- tm_map(document, stripWhitespace) # removewhite space
+
+
+# Create document-term matrix
+dtm <- DocumentTermMatrix(document)
+
+
+# Create Model with 4 Topics
+model_lda <- LDA(dtm, k = 4, control = list(seed = 1234))
+model_lda
+
+
+# Shows the probability of a word being associated to a topic
+beta_topics <- tidy(model_lda, matrix = "beta") # create the beta model
+beta_topics # shows all the information in the beta_topics
+```
+
+
+
+```{r}
+# Grouping the terms by topic
+beta_top_terms <- beta_topics %>%
+  group_by(topic) %>%
+  slice_max(beta, n = 10) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+
+
+# Display the grouped terms on the charts
+beta_top_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(beta, term, fill = factor(topic))) + 
+  geom_col(show.legend = FALSE) + 
+  facet_wrap(~ topic, scales = "free") + 
+  scale_y_reordered()
+
+# topic 1 is about students mental limits, like maths difficulty
+# topic 2 is about tech classroom
+# topic 3 is about tech education 
+# topic 4 is about education, craft, tech subsject & curricululum
+```
+
+
+
+```{r}
+
+# filters terms by topics
+tidy(dtm) %>%
+  filter(document == 3) %>%
+  arrange(desc(count))
+
+```
+
+```{r}
+# Examining per document per topic probability
+# gamme indicates how documents affects the topics
+# For example, document 1, 6.4 gamma on topic 1, also document 4 is 9.99 on topic 1, document 4 is the highest gamma
+gamma_documents <- tidy(model_lda, matrix = "gamma")
+
+```
+
+```{r}
+
+# create a dataframe with gamme results
+doc_gamma.df <- data.frame(gamma_documents)
+doc_gamma.df$chapter <- rep(1:dim(dtm)[1],4)
+
+
+# plot gamma results
+ggplot(data = doc_gamma.df, aes(x = chapter, y = gamma,
+                                group = factor(topic), color = factor(topic))) + geom_line() + facet_wrap(~factor(topic), ncol = 1)
+
+
+# when we interpret the chart
+# document 4 is made up topic 1
+# document 1 is made up topic 2
+# document 2 is made up topic 3
+# document 3 is made up topic 4 
+
+```
